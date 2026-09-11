@@ -4,7 +4,10 @@ param(
     [string] $SiteName,
 
     [Parameter(Mandatory = $true)]
-    [string] $PublishPath
+    [string] $PublishPath,
+
+    [Parameter(Mandatory = $true)]
+    [string] $HostName
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,4 +68,22 @@ Set-WebConfigurationProperty `
 Restart-WebAppPool -Name $applicationPool
 
 Write-Host "Deployment complete. IIS site '$SiteName' now points to $publishPath."
-Write-Host "Test with: curl.exe -i http://localhost/health -H `"Host: <your-host-name>`""
+
+$healthUri = 'http://localhost/health'
+$health = $null
+for ($attempt = 1; $attempt -le 10; $attempt++) {
+    try {
+        $health = Invoke-RestMethod -Uri $healthUri -Headers @{ Host = $HostName } -TimeoutSec 5
+        break
+    }
+    catch {
+        if ($attempt -eq 10) { throw }
+        Start-Sleep -Seconds 1
+    }
+}
+
+if ($health.Application -ne 'LiveRateApi') {
+    throw "Deployment verification failed: '$HostName' is serving '$($health.Application)' instead of 'LiveRateApi'. Check the IIS binding and physical path."
+}
+
+Write-Host "Verified $HostName is serving LiveRateApi."

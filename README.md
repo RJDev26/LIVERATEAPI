@@ -57,8 +57,15 @@ files, checks `AspNetCoreModuleV2`, points the site at the publish directory,
 enables anonymous authentication, and restarts its application pool:
 
 ```powershell
-.\scripts\Publish-Iis.ps1 -SiteName "LiveRateApi" -PublishPath "C:\Sites\LiveRateApi"
+.\scripts\Publish-Iis.ps1 `
+  -SiteName "LiveRateApi" `
+  -PublishPath "C:\Sites\LiveRateApi" `
+  -HostName "livense.saralaccount.com"
 ```
+
+The script fails unless that hostname's `/health` response identifies the running
+application as `LiveRateApi`; a successful file copy alone is not considered a
+successful deployment.
 
 After publishing, verify locally on the server before testing the public binding:
 
@@ -102,6 +109,13 @@ A log category beginning with `LiveExchangeRatesAPI`, for example
 project** (its application assembly is `LiveRateApi`). It proves that IIS is still
 running another/older application. The deployment script now publishes to a clean
 staging directory and replaces the target so stale assemblies cannot survive.
+
+Consequently, repeating `LiveExchangeRatesAPI.Middlewares.ErrorHandlerMiddleware`
+timeout entries cannot be corrected in this repository: the timed-out database
+query and that middleware's source are not present here. Obtain the source project
+that builds `LiveExchangeRatesAPI.dll` to optimize its query/indexes or change its
+database command timeout. Do not only increase a timeout without first capturing
+the timed-out SQL command and its execution plan.
 
 After deployment, `/health` returns `"application":"LiveRateApi"`. If it does not,
 check the IIS binding and physical path before changing timeout values. In this
