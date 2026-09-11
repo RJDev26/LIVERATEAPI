@@ -94,3 +94,17 @@ Also confirm the host binding for `livense.saralaccount.com` is assigned to this
 application's IIS site rather than a different site. Do not enable directory
 browsing as a workaround: a correctly configured ASP.NET Core wildcard handler
 handles `/` and `/api/liverates` without exposing the publish directory.
+
+## Timeout log identification
+
+A log category beginning with `LiveExchangeRatesAPI`, for example
+`LiveExchangeRatesAPI.Middlewares.ErrorHandlerMiddleware`, is **not emitted by this
+project** (its application assembly is `LiveRateApi`). It proves that IIS is still
+running another/older application. The deployment script now publishes to a clean
+staging directory and replaces the target so stale assemblies cannot survive.
+
+After deployment, `/health` returns `"application":"LiveRateApi"`. If it does not,
+check the IIS binding and physical path before changing timeout values. In this
+application, HTTP, JSON, operation, and SQL command timeouts (SQL error number
+`-2`) are treated as transient refresh failures: they are retried and then use the
+last-known-good rates. Client disconnect cancellation is deliberately not retried.

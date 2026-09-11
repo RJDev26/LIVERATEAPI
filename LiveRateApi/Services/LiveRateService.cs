@@ -43,8 +43,7 @@ public sealed class LiveRateService(
                     attempt, attempts);
             }
             catch (Exception exception) when (
-                exception is HttpRequestException or System.Text.Json.JsonException ||
-                exception is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+                TransientFailureDetector.IsTransient(exception, cancellationToken))
             {
                 logger.LogWarning(exception,
                     "Live-rate provider request failed on attempt {Attempt}/{Attempts}.",

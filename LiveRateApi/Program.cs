@@ -19,7 +19,11 @@ app.MapGet("/", () => Results.Ok(new
     LiveRatesEndpoint = "/api/liverates"
 }));
 
-app.MapGet("/health", () => Results.Ok(new { Status = "Healthy" }));
+app.MapGet("/health", () => Results.Ok(new
+{
+    Status = "Healthy",
+    Application = typeof(Program).Assembly.GetName().Name
+}));
 
 app.MapGet("/api/liverates", async (LiveRateService service, CancellationToken cancellationToken) =>
 {
