@@ -12,6 +12,15 @@ builder.Services.AddHttpClient<LiveRateService>((services, client) =>
 
 var app = builder.Build();
 
+app.MapGet("/", () => Results.Ok(new
+{
+    IsSuccess = true,
+    Service = "Live Rate API",
+    LiveRatesEndpoint = "/api/liverates"
+}));
+
+app.MapGet("/health", () => Results.Ok(new { Status = "Healthy" }));
+
 app.MapGet("/api/liverates", async (LiveRateService service, CancellationToken cancellationToken) =>
 {
     var result = await service.GetRatesAsync(cancellationToken);
