@@ -15,6 +15,12 @@ fails, that value is returned instead. Before the first successful refresh, an
 empty result is returned with HTTP 503 and `IsSuccess: false`; the API never emits
 `IsSuccess: true` together with an empty `Data` array.
 
+Successful responses are cached for 60 seconds (`LiveRates:CacheDurationSeconds`).
+Requests during that minute return directly from memory without contacting the
+provider. When the minute expires, a single request refreshes the cache while
+concurrent requests wait for and reuse its result, preventing a provider/database
+request stampede.
+
 ## Deploying to IIS
 
 Publish the application rather than copying the project or build directory:

@@ -11,6 +11,31 @@ public sealed class LiveRateService(
 {
     public async Task<LiveRateResponse> GetRatesAsync(CancellationToken cancellationToken)
     {
+        var cacheLifetime = TimeSpan.FromSeconds(
+            Math.Max(1, configuration.GetValue("LiveRates:CacheDurationSeconds", 60)));
+        var cached = cache.GetFresh(cacheLifetime);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        // Only one request refreshes an expired cache. Other simultaneous requests
+        // wait and then consume that response instead of creating a database/provider
+        // request stampede that can cause command timeouts.
+        await cache.RefreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            cached = cache.GetFresh(cacheLifetime);
+            return cached ?? await RefreshRatesAsync(cancellationToken);
+        }
+        finally
+        {
+            cache.RefreshLock.Release();
+        }
+    }
+
+    private async Task<LiveRateResponse> RefreshRatesAsync(CancellationToken cancellationToken)
+    {
         var providerUrl = configuration["LiveRates:ProviderUrl"];
         if (!Uri.TryCreate(providerUrl, UriKind.Absolute, out var providerUri))
         {

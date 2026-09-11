@@ -6,12 +6,25 @@ public sealed class LiveRateCache
 {
     private readonly object _lock = new();
     private LiveRateResponse? _lastGoodResponse;
+    private DateTimeOffset _cachedAt;
+
+    internal SemaphoreSlim RefreshLock { get; } = new(1, 1);
 
     public LiveRateResponse? Get()
     {
         lock (_lock)
         {
             return _lastGoodResponse;
+        }
+    }
+
+    public LiveRateResponse? GetFresh(TimeSpan lifetime)
+    {
+        lock (_lock)
+        {
+            return _lastGoodResponse is not null && DateTimeOffset.UtcNow - _cachedAt < lifetime
+                ? _lastGoodResponse
+                : null;
         }
     }
 
@@ -25,6 +38,7 @@ public sealed class LiveRateCache
         lock (_lock)
         {
             _lastGoodResponse = response;
+            _cachedAt = DateTimeOffset.UtcNow;
         }
     }
 }
