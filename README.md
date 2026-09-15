@@ -21,6 +21,11 @@ provider. When the minute expires, a single request refreshes the cache while
 concurrent requests wait for and reuse its result, preventing a provider/database
 request stampede.
 
+The HTTP response is also protected by ASP.NET Core output caching for one minute.
+Only successful 200 responses are cached by the default output-cache policy; a 503
+is never stored. Resource locking coalesces concurrent cache misses before the
+endpoint executes, providing a second boundary ahead of the provider service.
+
 ## Deploying to IIS
 
 Publish the application rather than copying the project or build directory:

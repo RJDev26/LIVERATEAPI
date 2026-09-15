@@ -3,6 +3,7 @@ using LiveRateApi.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<LiveRateCache>();
+builder.Services.AddOutputCache();
 builder.Services.AddHttpClient<LiveRateService>((services, client) =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -11,6 +12,7 @@ builder.Services.AddHttpClient<LiveRateService>((services, client) =>
 });
 
 var app = builder.Build();
+app.UseOutputCache();
 
 app.MapGet("/", () => Results.Ok(new
 {
@@ -31,7 +33,10 @@ app.MapGet("/api/liverates", async (LiveRateService service, CancellationToken c
     return result.IsSuccess
         ? Results.Ok(result)
         : Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable);
-});
+})
+.CacheOutput(policy => policy
+    .Expire(TimeSpan.FromMinutes(1))
+    .SetLocking(true));
 
 app.Run();
 
