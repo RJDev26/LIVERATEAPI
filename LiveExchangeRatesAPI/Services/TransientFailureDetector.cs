@@ -1,6 +1,6 @@
 using System.Data.Common;
 
-namespace LiveRateApi.Services;
+namespace LiveExchangeRatesAPI.Services;
 
 internal static class TransientFailureDetector
 {

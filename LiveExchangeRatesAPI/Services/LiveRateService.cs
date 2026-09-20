@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
-using LiveRateApi.Models;
+using LiveExchangeRatesAPI.Models;
 
-namespace LiveRateApi.Services;
+namespace LiveExchangeRatesAPI.Services;
 
 public sealed class LiveRateService(
     HttpClient httpClient,

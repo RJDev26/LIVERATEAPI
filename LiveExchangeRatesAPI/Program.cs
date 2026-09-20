@@ -1,4 +1,5 @@
-using LiveRateApi.Services;
+using LiveExchangeRatesAPI.Middlewares;
+using LiveExchangeRatesAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,7 @@ builder.Services.AddHttpClient<LiveRateService>((services, client) =>
 });
 
 var app = builder.Build();
+app.UseMiddleware<ErrorHandlerMiddleware>();
 app.UseOutputCache();
 
 app.MapGet("/", () => Results.Ok(new

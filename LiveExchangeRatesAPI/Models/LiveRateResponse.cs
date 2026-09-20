@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace LiveRateApi.Models;
+namespace LiveExchangeRatesAPI.Models;
 
 public sealed record LiveRateResponse(
     [property: JsonPropertyName("IsSuccess")] bool IsSuccess,

@@ -6,7 +6,7 @@ successful live-rate response.
 Set `LiveRates__ProviderUrl` to the upstream endpoint, then run the application:
 
 ```sh
-dotnet run --project LiveRateApi
+dotnet run --project LiveExchangeRatesAPI
 ```
 
 `GET /api/liverates` retries unsuccessful or empty provider results. A successful,
@@ -31,7 +31,7 @@ endpoint executes, providing a second boundary ahead of the provider service.
 Publish the application rather than copying the project or build directory:
 
 ```powershell
-dotnet publish .\LiveRateApi\LiveRateApi.csproj -c Release -o C:\Sites\LiveRateApi
+dotnet publish .\LiveExchangeRatesAPI\LiveExchangeRatesAPI.csproj -c Release -o C:\Sites\LiveExchangeRatesAPI
 ```
 
 The two IIS-branded responses shown together identify one deployment problem:
@@ -51,8 +51,8 @@ On the server:
 
 1. Install the .NET 8 **Hosting Bundle** (not only the runtime), then restart IIS
    with `iisreset` so `AspNetCoreModuleV2` is loaded.
-2. Point the IIS site's physical path at `C:\Sites\LiveRateApi`, the publish output
-   containing `LiveRateApi.dll` and `web.config`.
+2. Point the IIS site's physical path at `C:\Sites\LiveExchangeRatesAPI`, the publish output
+   containing `LiveExchangeRatesAPI.dll` and `web.config`.
 3. If it is deployed below another IIS site, use **Convert to Application** for
    that directory and assign an application pool with **No Managed Code**.
 4. Grant the application-pool identity read/execute access to the publish folder.
@@ -69,13 +69,13 @@ enables anonymous authentication, and restarts its application pool:
 
 ```powershell
 .\scripts\Publish-Iis.ps1 `
-  -SiteName "LiveRateApi" `
-  -PublishPath "C:\Sites\LiveRateApi" `
+  -SiteName "LiveExchangeRatesAPI" `
+  -PublishPath "C:\Sites\LiveExchangeRatesAPI" `
   -HostName "livense.saralaccount.com"
 ```
 
 The script fails unless that hostname's `/health` response identifies the running
-application as `LiveRateApi`; a successful file copy alone is not considered a
+application as `LiveExchangeRatesAPI`; a successful file copy alone is not considered a
 successful deployment.
 
 After publishing, verify locally on the server before testing the public binding:
@@ -98,11 +98,11 @@ Check all of the following on the deployed server:
 
 ```powershell
 # The publish directory must contain both files.
-Test-Path C:\Sites\LiveRateApi\LiveRateApi.dll
-Test-Path C:\Sites\LiveRateApi\web.config
+Test-Path C:\Sites\LiveExchangeRatesAPI\LiveExchangeRatesAPI.dll
+Test-Path C:\Sites\LiveExchangeRatesAPI\web.config
 
 # Allow IIS to read and execute the deployed application.
-icacls C:\Sites\LiveRateApi /grant "IIS_IUSRS:(OI)(CI)(RX)" /T
+icacls C:\Sites\LiveExchangeRatesAPI /grant "IIS_IUSRS:(OI)(CI)(RX)" /T
 
 # Confirm the ASP.NET Core IIS module was installed.
 Test-Path "$env:ProgramFiles\IIS\Asp.Net Core Module\V2\aspnetcorev2.dll"
@@ -113,23 +113,24 @@ application's IIS site rather than a different site. Do not enable directory
 browsing as a workaround: a correctly configured ASP.NET Core wildcard handler
 handles `/` and `/api/liverates` without exposing the publish directory.
 
-## Timeout log identification
+## Timeout handling
 
-A log category beginning with `LiveExchangeRatesAPI`, for example
-`LiveExchangeRatesAPI.Middlewares.ErrorHandlerMiddleware`, is **not emitted by this
-project** (its application assembly is `LiveRateApi`). It proves that IIS is still
-running another/older application. The deployment script now publishes to a clean
-staging directory and replaces the target so stale assemblies cannot survive.
+The complete solution and assembly now use the `LiveExchangeRatesAPI` name and
+target .NET 8. HTTP, JSON, operation, and SQL command timeouts (SQL error number
+`-2`) are treated as transient refresh failures: the service retries and then uses
+the last-known-good rates. Client disconnect cancellation is deliberately not
+retried.
 
-Consequently, repeating `LiveExchangeRatesAPI.Middlewares.ErrorHandlerMiddleware`
-timeout entries cannot be corrected in this repository: the timed-out database
-query and that middleware's source are not present here. Obtain the source project
-that builds `LiveExchangeRatesAPI.dll` to optimize its query/indexes or change its
-database command timeout. Do not only increase a timeout without first capturing
-the timed-out SQL command and its execution plan.
+If a transient timeout escapes a lower layer, `ErrorHandlerMiddleware` converts it
+to HTTP 503 JSON with `Retry-After: 60` instead of logging it as an unhandled error.
+It logs at Warning level and never attempts to rewrite an already-started or
+aborted response. This prevents the repeated
+`LiveExchangeRatesAPI.Middlewares.ErrorHandlerMiddleware - Timeout expired` error
+classification while preserving an accurate unavailable response.
 
-After deployment, `/health` returns `"application":"LiveRateApi"`. If it does not,
-check the IIS binding and physical path before changing timeout values. In this
-application, HTTP, JSON, operation, and SQL command timeouts (SQL error number
-`-2`) are treated as transient refresh failures: they are retried and then use the
-last-known-good rates. Client disconnect cancellation is deliberately not retried.
+Build or publish the complete .NET 8 solution with:
+
+```powershell
+dotnet build .\LiveExchangeRatesAPI.sln -c Release
+dotnet publish .\LiveExchangeRatesAPI\LiveExchangeRatesAPI.csproj -c Release
+```

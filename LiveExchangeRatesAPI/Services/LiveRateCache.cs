@@ -1,6 +1,6 @@
-using LiveRateApi.Models;
+using LiveExchangeRatesAPI.Models;
 
-namespace LiveRateApi.Services;
+namespace LiveExchangeRatesAPI.Services;
 
 public sealed class LiveRateCache
 {

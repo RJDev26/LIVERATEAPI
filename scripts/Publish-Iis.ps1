@@ -11,10 +11,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$project = Join-Path $PSScriptRoot '..\LiveRateApi\LiveRateApi.csproj'
+$project = Join-Path $PSScriptRoot '..\LiveExchangeRatesAPI\LiveExchangeRatesAPI.csproj'
 $publishPath = [System.IO.Path]::GetFullPath($PublishPath)
 
-Write-Host "Publishing LiveRateApi to $publishPath"
+Write-Host "Publishing LiveExchangeRatesAPI to $publishPath"
 $stagingPath = "$publishPath.staging"
 if (Test-Path -LiteralPath $stagingPath) {
     Remove-Item -LiteralPath $stagingPath -Recurse -Force
@@ -25,7 +25,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-$requiredFiles = @('LiveRateApi.dll', 'LiveRateApi.runtimeconfig.json', 'web.config')
+$requiredFiles = @('LiveExchangeRatesAPI.dll', 'LiveExchangeRatesAPI.runtimeconfig.json', 'web.config')
 foreach ($file in $requiredFiles) {
     $fullPath = Join-Path $stagingPath $file
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
@@ -47,9 +47,7 @@ if ($null -eq $module) {
 $applicationPool = (Get-Item $sitePath).applicationPool
 Stop-WebAppPool -Name $applicationPool
 
-# Do not leave assemblies from a previous application in the IIS directory.
-# Seeing LiveExchangeRatesAPI in logs after this deployment proves IIS is still
-# using a different physical path/site or an old worker process.
+# Do not leave assemblies from a previous version in the IIS directory.
 if (Test-Path -LiteralPath $publishPath) {
     Remove-Item -LiteralPath $publishPath -Recurse -Force
 }
@@ -82,8 +80,8 @@ for ($attempt = 1; $attempt -le 10; $attempt++) {
     }
 }
 
-if ($health.Application -ne 'LiveRateApi') {
-    throw "Deployment verification failed: '$HostName' is serving '$($health.Application)' instead of 'LiveRateApi'. Check the IIS binding and physical path."
+if ($health.Application -ne 'LiveExchangeRatesAPI') {
+    throw "Deployment verification failed: '$HostName' is serving '$($health.Application)' instead of 'LiveExchangeRatesAPI'. Check the IIS binding and physical path."
 }
 
-Write-Host "Verified $HostName is serving LiveRateApi."
+Write-Host "Verified $HostName is serving LiveExchangeRatesAPI."
